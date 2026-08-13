@@ -2,447 +2,548 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BASF - High Voltage Switching Portal (Cloud Server)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Grid Operator Portal - Live Control & Gantt Scheduler</title>
   
-  <!-- Tailwind CSS -->
+  <!-- Frappe Gantt JS & CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/frappe-gantt/0.6.1/frappe-gantt.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/frappe-gantt/0.6.1/frappe-gantt.min.js"></script>
+  
+  <!-- FontAwesome & Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- ExcelJS -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
-  <!-- FileSaver.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 
   <style>
-    body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
-    input, select, textarea {
-      background-color: #1e293b !important;
-      color: #f8fafc !important;
-      border: 1px solid #334155 !important;
-    }
-    input:focus, select:focus, textarea:focus {
-      border-color: #004A96 !important;
-      outline: none !important;
-    }
-    .basf-blue { background-color: #004A96; }
-    .basf-blue:hover { background-color: #003366; }
+    /* Custom SVG Grid Line Animations */
+    .power-line { stroke-dasharray: 8; animation: dash 1s linear infinite; }
+    .power-line-deenergized { stroke: #334155; stroke-dasharray: none; }
+    @keyframes dash { to { stroke-dashoffset: -16; } }
+
+    /* Gantt Custom Styling for Dark Theme Integration */
+    .gantt .bar-progress { fill: #3b82f6; }
+    .gantt .bar { fill: #475569; rx: 4px; ry: 4px; }
+    .gantt .bar-label { fill: #f8fafc; font-weight: 500; font-size: 11px; }
+    .gantt .grid-header { fill: #1e293b; stroke: #334155; }
+    .gantt .grid-row { fill: #0f172a; }
+    .gantt .grid-row:nth-child(even) { fill: #1e293b; }
+    .gantt .row-line, .gantt .tick { stroke: #334155; }
+    .gantt .upper-text, .gantt .lower-text { fill: #94a3b8; }
+    .gantt .handle { fill: #38bdf8; }
+    .gantt .status-pending .bar { fill: #eab308; }
+    .gantt .status-in-progress .bar { fill: #06b6d4; }
+    .gantt .status-completed .bar { fill: #22c55e; }
   </style>
 </head>
-<body class="p-4 md:p-8 min-h-screen flex flex-col justify-between">
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased pb-12">
 
-  <div class="max-w-7xl mx-auto w-full space-y-6">
-    
-    <!-- Top Header -->
-    <header class="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-xl flex flex-col md:flex-row justify-between items-center gap-4">
-      <div class="flex items-center gap-4">
-        <!-- BASF Logo -->
-        <div class="bg-white p-2 rounded-md shadow flex items-center justify-center">
-          <svg class="h-8 w-24" viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="120" height="40" fill="white"/>
-            <rect x="5" y="8" width="24" height="24" fill="#004A96"/>
-            <rect x="11" y="14" width="12" height="12" fill="white"/>
-            <rect x="32" y="18" width="6" height="14" fill="#004A96"/>
-            <text x="42" y="27" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="20" fill="#004A96">BASF</text>
-          </svg>
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <div class="p-2 bg-blue-600/20 text-blue-400 rounded-lg border border-blue-500/30">
+          <i class="fa-solid fa-bolt-lightning text-xl"></i>
         </div>
         <div>
-          <h1 class="text-xl font-bold text-white tracking-wide">High Voltage Switching Portal</h1>
-          <p class="text-xs text-slate-400">CDSO Centralized Cloud Operations Engine</p>
+          <h1 class="font-bold text-lg text-slate-100">Grid Control Center</h1>
+          <p class="text-xs text-slate-400">Integrated Operations, Dispatch & Gantt Scheduler</p>
         </div>
       </div>
-
-      <!-- Operator Navigation -->
-      <div id="authNav">
-        <button id="loginBtn" onclick="showLoginModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-2 px-4 rounded-lg border border-slate-700 flex items-center gap-2 transition">
-          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
-          CDSO Operator Login
+      <div class="flex items-center gap-3">
+        <button onclick="resetData()" class="px-3 py-1.5 text-xs text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded transition">
+          <i class="fa-solid fa-rotate-left mr-1"></i> Reset Demo State
         </button>
-        <div id="operatorBadge" class="hidden flex items-center gap-3">
-          <span class="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs px-3 py-1 rounded-full font-mono">Logged in: CDSO Operator</span>
-          <button onclick="logoutCDSO()" class="bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-semibold py-1.5 px-3 rounded-lg border border-red-500/30 transition">
-            Logout
-          </button>
+        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <span class="w-2 h-2 mr-1.5 bg-emerald-400 rounded-full animate-pulse"></span> SCADA Live
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-6 space-y-8">
+
+    <!-- Top Telemetry Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+        <span class="text-xs text-slate-400 font-medium">Substation Active Load</span>
+        <div class="text-2xl font-bold text-slate-100 mt-1" id="statLoad">142.5 MW</div>
+        <span class="text-[10px] text-emerald-400"><i class="fa-solid fa-circle-up"></i> Within Nominal Limits</span>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+        <span class="text-xs text-slate-400 font-medium">Grid Frequency</span>
+        <div class="text-2xl font-bold text-slate-100 mt-1">60.02 Hz</div>
+        <span class="text-[10px] text-slate-400">Target: 60.00 Hz</span>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+        <span class="text-xs text-slate-400 font-medium">Active Breakers</span>
+        <div class="text-2xl font-bold text-cyan-400 mt-1" id="statBreakers">3 / 3 Closed</div>
+        <span class="text-[10px] text-slate-400" id="statBreakerSub">All Lines Energized</span>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+        <span class="text-xs text-slate-400 font-medium">Pending Switching Tasks</span>
+        <div class="text-2xl font-bold text-yellow-400 mt-1" id="statPendingCount">0</div>
+        <span class="text-[10px] text-slate-400">Scheduled Actions</span>
+      </div>
+    </div>
+
+    <!-- MAIN CONTROL ROOM SECTION: Interactive Schematic + Live Alarm Log -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Interactive Substation Single Line Diagram (SLD) -->
+      <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg flex flex-col justify-between">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-base font-semibold text-slate-200 flex items-center gap-2">
+            <i class="fa-solid fa-diagram-project text-blue-400"></i> Substation Alpha - Single Line Diagram
+          </h2>
+          <span class="text-xs text-slate-400 font-mono">138kV / 13.8kV Bus</span>
+        </div>
+
+        <!-- SVG Schematic Visualization -->
+        <div class="bg-slate-950 p-6 rounded-lg border border-slate-800/80 flex justify-center items-center relative overflow-hidden min-h-[280px]">
+          <svg width="100%" height="240" viewBox="0 0 600 240" class="w-full max-w-xl">
+            <!-- Main Transmission Grid Line -->
+            <line x1="50" y1="50" x2="550" y2="50" stroke="#0284c7" stroke-width="6"/>
+            <text x="60" y="38" fill="#38bdf8" class="text-[11px] font-mono font-bold">138kV MAIN BUS</text>
+
+            <!-- Feeder 1 Branch -->
+            <line x1="120" y1="50" x2="120" y2="200" id="line1" class="power-line" stroke="#22c55e" stroke-width="3"/>
+            <g onclick="toggleBreaker('CB101')" class="cursor-pointer group">
+              <rect id="rect-CB101" x="105" y="100" width="30" height="30" rx="4" fill="#15803d" stroke="#4ade80" stroke-width="2"/>
+              <text id="txt-CB101" x="120" y="120" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" class="text-[10px] font-bold">CLOSED</text>
+            </g>
+            <text x="120" y="220" text-anchor="middle" fill="#94a3b8" class="text-[11px]">Feeder 101 (North)</text>
+
+            <!-- Transformer Branch -->
+            <line x1="300" y1="50" x2="300" y2="200" id="line2" class="power-line" stroke="#22c55e" stroke-width="3"/>
+            <g onclick="toggleBreaker('CB102')" class="cursor-pointer group">
+              <rect id="rect-CB102" x="285" y="100" width="30" height="30" rx="4" fill="#15803d" stroke="#4ade80" stroke-width="2"/>
+              <text id="txt-CB102" x="300" y="120" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" class="text-[10px] font-bold">CLOSED</text>
+            </g>
+            <circle cx="300" cy="165" r="12" fill="none" stroke="#38bdf8" stroke-width="2"/>
+            <circle cx="300" cy="177" r="12" fill="none" stroke="#38bdf8" stroke-width="2"/>
+            <text x="300" y="220" text-anchor="middle" fill="#94a3b8" class="text-[11px]">XFMR Bank 1</text>
+
+            <!-- Feeder 2 Branch -->
+            <line x1="480" y1="50" x2="480" y2="200" id="line3" class="power-line" stroke="#22c55e" stroke-width="3"/>
+            <g onclick="toggleBreaker('CB103')" class="cursor-pointer group">
+              <rect id="rect-CB103" x="465" y="100" width="30" height="30" rx="4" fill="#15803d" stroke="#4ade80" stroke-width="2"/>
+              <text id="txt-CB103" x="480" y="120" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" class="text-[10px] font-bold">CLOSED</text>
+            </g>
+            <text x="480" y="220" text-anchor="middle" fill="#94a3b8" class="text-[11px]">Feeder 103 (Industrial)</text>
+          </svg>
+        </div>
+
+        <p class="text-xs text-slate-400 mt-3"><i class="fa-solid fa-mouse-pointer text-blue-400 mr-1"></i> Click any Circuit Breaker (CB) in the schematic above to execute an immediate trip/close operation.</p>
+      </div>
+
+      <!-- Live SCADA Log Feed -->
+      <div class="lg:col-span-1 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg flex flex-col">
+        <h2 class="text-base font-semibold text-slate-200 mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-list-ul text-blue-400"></i> Operational Audit Log
+        </h2>
+        <div id="alarmLog" class="bg-slate-950 border border-slate-800 rounded-lg p-3 h-64 overflow-y-auto font-mono text-[11px] space-y-2 flex-grow">
+          <!-- Dynamically populated log entries -->
         </div>
       </div>
-    </header>
 
-    <!-- SECTION 1: APPLICANT FORM (Submits directly to Cloud Server) -->
-    <main id="applicantView" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      
-      <div class="lg:col-span-1 bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-xl">
-        <h2 class="text-md font-semibold mb-4 text-sky-400 flex items-center gap-2">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-          Submit Switching Application
+    </div>
+
+    <!-- EXTENDED SCHEDULER SECTION: Create Request + Gantt Visualization -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- Form: Schedule Switching Task -->
+      <div class="lg:col-span-1 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
+        <h2 class="text-base font-semibold text-slate-200 mb-4 flex items-center gap-2">
+          <i class="fa-solid fa-calendar-plus text-blue-400"></i> Schedule Switching Work
         </h2>
-
-        <form id="switchingForm" onsubmit="handleFormSubmit(event)" class="space-y-3 text-xs">
+        
+        <form onsubmit="handleFormSubmit(event)" class="space-y-4">
           <div>
-            <label class="block text-slate-400 mb-1">Substation / Bay Reference *</label>
-            <input type="text" id="substation" required placeholder="e.g. Substation Central - Bay 12" class="w-full p-2.5 rounded-md" />
+            <label class="block text-xs font-medium text-slate-400 mb-1">Target Asset / Substation</label>
+            <input type="text" id="assetName" required placeholder="e.g. Substation Alpha - CB101"
+              class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
           </div>
 
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-slate-400 mb-1">Voltage Level *</label>
-              <select id="voltage" required class="w-full p-2.5 rounded-md">
-                <option value="150kV">150 kV</option>
-                <option value="36kV">36 kV</option>
-                <option value="10kV">10 kV</option>
-                <option value="6kV">6 kV</option>
-                <option value="0.69kV">0.69 kV</option>
-                <option value="0.40kV">0.40 kV</option>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Action Type</label>
+              <select id="actionType" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+                <option value="Open Breaker (Trip)">Trip Breaker</option>
+                <option value="Close Breaker">Close Breaker</option>
+                <option value="Isolate Transformer">Isolate Transformer</option>
+                <option value="Bus Transfer">Bus Transfer</option>
               </select>
             </div>
             <div>
-              <label class="block text-slate-400 mb-1">Equipment ID *</label>
-              <input type="text" id="equipment" required placeholder="e.g. Q01 Breaker" class="w-full p-2.5 rounded-md" />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-slate-400 mb-1">Action Type *</label>
-              <select id="actionType" required class="w-full p-2.5 rounded-md">
-                <option value="OPEN (Isolate)">OPEN (Isolate)</option>
-                <option value="CLOSE (Energize)">CLOSE (Energize)</option>
-                <option value="EARTH ON">EARTH ON</option>
-                <option value="EARTH OFF">EARTH OFF</option>
-                <option value="RACK OUT">RACK OUT</option>
-                <option value="RACK IN">RACK IN</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-slate-400 mb-1">Priority *</label>
-              <select id="priority" required class="w-full p-2.5 rounded-md">
-                <option value="Standard Scheduled">Standard</option>
-                <option value="Urgent Maintenance">Urgent</option>
-                <option value="EMERGENCY">EMERGENCY</option>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Priority</label>
+              <select id="priority" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+                <option value="Standard">Standard</option>
+                <option value="High">High</option>
+                <option value="Emergency">Emergency</option>
               </select>
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-slate-400 mb-1">Applicant Name *</label>
-              <input type="text" id="requester" required placeholder="John Doe" class="w-full p-2.5 rounded-md" />
+              <label class="block text-xs font-medium text-slate-400 mb-1">Start Time</label>
+              <input type="datetime-local" id="startTime" required
+                class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
             </div>
             <div>
-              <label class="block text-slate-400 mb-1">E-mail Address *</label>
-              <input type="email" id="email" required placeholder="john.doe@basf.com" class="w-full p-2.5 rounded-md" />
+              <label class="block text-xs font-medium text-slate-400 mb-1">Duration (Hours)</label>
+              <input type="number" id="duration" min="1" max="72" value="3" required
+                class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
             </div>
           </div>
 
-          <div>
-            <label class="block text-slate-400 mb-1">Requested Execution Date & Time *</label>
-            <input type="datetime-local" id="executionTime" required class="w-full p-2.5 rounded-md" />
-          </div>
-
-          <div>
-            <label class="block text-slate-400 mb-1">Operational Reason & Safety Interlocks *</label>
-            <textarea id="purpose" rows="3" required placeholder="Work permit details..." class="w-full p-2.5 rounded-md"></textarea>
-          </div>
-
-          <button type="submit" id="submitBtn" class="w-full basf-blue text-white font-medium py-2.5 rounded-md shadow-md transition flex justify-center items-center gap-2 text-sm mt-2">
-            Submit Request to Server
+          <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 px-4 rounded-lg text-xs transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-clock"></i> Submit To Gantt Schedule
           </button>
         </form>
       </div>
 
-      <div class="lg:col-span-2 bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-xl flex flex-col justify-between">
-        <div>
-          <h2 class="text-md font-semibold mb-2 text-slate-300">Centralized Grid Operations Status</h2>
-          <p class="text-xs text-slate-400 mb-6">Applications filed here are synchronized live with the CDSO Grid Operator cloud database.</p>
-
-          <div id="submissionAck" class="hidden p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs space-y-2 mb-6">
-            <div class="font-bold text-sm flex items-center gap-2">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-              Request Synchronized with Server!
-            </div>
-            <p>Application saved to server under Reference ID: <span id="ackId" class="font-mono font-bold text-white"></span>.</p>
+      <!-- Gantt Interactive Timeline -->
+      <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg space-y-4">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-800 pb-3">
+          <div>
+            <h2 class="text-base font-semibold text-slate-200 flex items-center gap-2">
+              <i class="fa-solid fa-chart-gantt text-blue-400"></i> Interactive Gantt Schedule
+            </h2>
+            <p class="text-xs text-slate-400">Drag bars to adjust start times or pull edges to resize task windows.</p>
           </div>
-
-          <div class="border border-slate-800 rounded-lg p-6 text-center text-slate-500 bg-slate-950/50">
-            <svg class="w-12 h-12 mx-auto mb-2 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-            <p class="text-sm font-medium text-slate-400">Restricted Operator Access</p>
-            <p class="text-xs text-slate-500 mt-1 max-w-md mx-auto">Only authenticated CDSO operators can query the central database to schedule tasks or download Excel logs.</p>
+          
+          <div class="flex items-center gap-2 bg-slate-950 p-1 rounded-lg border border-slate-800">
+            <button onclick="changeGanttView('Hour')" id="btnHour" class="px-3 py-1 text-xs rounded font-medium text-slate-400 hover:text-white transition">Hour</button>
+            <button onclick="changeGanttView('Day')" id="btnDay" class="px-3 py-1 text-xs rounded font-medium bg-blue-600 text-white transition">Day</button>
+            <button onclick="changeGanttView('Week')" id="btnWeek" class="px-3 py-1 text-xs rounded font-medium text-slate-400 hover:text-white transition">Week</button>
           </div>
         </div>
-        
-        <div class="text-[11px] text-slate-500 pt-4 border-t border-slate-800">
-          BASF Electrical Safety Regulations • Central Server Endpoint
+
+        <div class="overflow-x-auto pt-2">
+          <div id="gantt-chart" class="min-w-[600px]"></div>
         </div>
       </div>
-    </main>
 
-    <!-- SECTION 2: CDSO OPERATOR CLOUD DASHBOARD (Queries Central Database) -->
-    <main id="operatorPortal" class="hidden space-y-6">
-      
-      <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 class="text-lg font-bold text-emerald-400 flex items-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-            CDSO Server Database Management Console
-          </h2>
-          <p class="text-xs text-slate-400 mt-0.5">Live server records synced across all operator consoles.</p>
-        </div>
-
-        <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold py-2.5 px-4 rounded-lg shadow-lg flex items-center gap-2 transition">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-          Export Live Server Log to Excel (.xlsx)
-        </button>
-      </div>
-
-      <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-xl">
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs text-slate-300">
-            <thead class="bg-slate-800 text-slate-400 uppercase tracking-wider">
-              <tr>
-                <th class="p-3">Ref ID</th>
-                <th class="p-3">Substation & Equipment</th>
-                <th class="p-3">Action</th>
-                <th class="p-3">Requested Time</th>
-                <th class="p-3">Applicant & Contact</th>
-                <th class="p-3">Server Schedule Status</th>
-                <th class="p-3 text-right">Delete</th>
-              </tr>
-            </thead>
-            <tbody id="operatorTableBody" class="divide-y divide-slate-800">
-              <!-- Loaded dynamically from Firebase Firestore -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </main>
-
-  </div>
-
-  <!-- CDSO Login Modal -->
-  <div id="loginModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
-    <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl max-w-sm w-full space-y-4 shadow-2xl">
-      <div class="flex justify-between items-center">
-        <h3 class="text-sm font-bold text-white flex items-center gap-2">
-          CDSO Operator Authentication
-        </h3>
-        <button onclick="hideLoginModal()" class="text-slate-500 hover:text-white">&times;</button>
-      </div>
-
-      <form onsubmit="handleLogin(event)" class="space-y-3 text-xs">
-        <div>
-          <label class="block text-slate-400 mb-1">Login Name</label>
-          <input type="text" id="loginUser" required class="w-full p-2.5 rounded-md" />
-        </div>
-        <div>
-          <label class="block text-slate-400 mb-1">Password</label>
-          <input type="password" id="loginPass" required class="w-full p-2.5 rounded-md" />
-        </div>
-        <div id="loginError" class="text-red-400 text-xs hidden">Invalid operator credentials.</div>
-        <button type="submit" class="w-full basf-blue text-white font-medium py-2 rounded-md shadow transition">
-          Authenticate & Connect to Server
-        </button>
-      </form>
     </div>
-  </div>
 
-  <!-- FIREBASE CLOUD DATABASE SDKs -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { 
-      getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, onSnapshot 
-    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    <!-- Data Retention Table -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg space-y-4">
+      <h2 class="text-base font-semibold text-slate-200 flex items-center gap-2">
+        <i class="fa-solid fa-database text-blue-400"></i> Retained Switching Schedule Registry
+      </h2>
 
-    // -------------------------------------------------------------
-    // REPLACE WITH YOUR FIREBASE CONFIG KEYS (See Step 2 below)
-    // -------------------------------------------------------------
-    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-    const firebaseConfig = {
-    apiKey: "AIzaSyAYHY-E8GWkNkHmO1dyZyqxALrlvuDod6k",
-    authDomain: "basf-hv-switching.firebaseapp.com",
-    databaseURL: "https://basf-hv-switching-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "basf-hv-switching",
-    storageBucket: "basf-hv-switching.firebasestorage.app",
-    messagingSenderId: "332504530721",
-    appId: "1:332504530721:web:f653741214896dd3eb4860",
-    measurementId: "G-P6XZVBGQNM"
-    };
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="border-b border-slate-800 text-slate-400 font-semibold bg-slate-950/50">
+              <th class="p-3">ID</th>
+              <th class="p-3">Asset / Substation</th>
+              <th class="p-3">Action</th>
+              <th class="p-3">Scheduled Window</th>
+              <th class="p-3">Status</th>
+              <th class="p-3 text-right">Direct Controls</th>
+            </tr>
+          </thead>
+          <tbody id="scheduleTableBody" class="divide-y divide-slate-800/60 text-slate-300">
+            <!-- Dynamic Table Rows -->
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-    // Initialize Firebase Engine
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const requestsRef = collection(db, "switching_requests");
-
-    window.serverRequests = [];
-    let isLoggedIn = false;
-
-    // Real-Time Server Synchronization
-    onSnapshot(requestsRef, (snapshot) => {
-      window.serverRequests = snapshot.docs.map(doc => ({
-        docId: doc.id,
-        ...doc.data()
-      }));
-      renderOperatorTable();
-    });
-
-    // Public Submit directly to Server Database
-    window.handleFormSubmit = async function(e) {
-      e.preventDefault();
-      const btn = document.getElementById('submitBtn');
-      btn.innerText = "Transmitting to Server...";
-      btn.disabled = true;
-
-      const newReq = {
-        refId: 'BASF-HV-' + Math.floor(10000 + Math.random() * 90000),
-        timestamp: new Date().toLocaleString(),
-        substation: document.getElementById('substation').value,
-        voltage: document.getElementById('voltage').value,
-        equipment: document.getElementById('equipment').value,
-        actionType: document.getElementById('actionType').value,
-        priority: document.getElementById('priority').value,
-        requester: document.getElementById('requester').value,
-        email: document.getElementById('email').value,
-        executionTime: document.getElementById('executionTime').value.replace('T', ' '),
-        purpose: document.getElementById('purpose').value,
-        status: 'Pending Review'
-      };
-
-      try {
-        await addDoc(requestsRef, newReq);
-        document.getElementById('ackId').textContent = newReq.refId;
-        document.getElementById('submissionAck').classList.remove('hidden');
-        document.getElementById('switchingForm').reset();
-      } catch (err) {
-        alert("Error connecting to server database: " + err.message);
-      } finally {
-        btn.innerText = "Submit Request to Server";
-        btn.disabled = false;
-      }
-    };
-
-    // Operator Updates Status on Central Server
-    window.updateStatus = async function(docId, newStatus) {
-      const requestDoc = doc(db, "switching_requests", docId);
-      await updateDoc(requestDoc, { status: newStatus });
-    };
-
-    // Operator Deletes Request on Central Server
-    window.removeRequest = async function(docId) {
-      if (confirm('Delete this record permanently from the central server?')) {
-        const requestDoc = doc(db, "switching_requests", docId);
-        await deleteDoc(requestDoc);
-      }
-    };
-  </script>
+  </main>
 
   <script>
-    // Authentication Logic
-    function showLoginModal() { document.getElementById('loginModal').classList.remove('hidden'); }
-    function hideLoginModal() { document.getElementById('loginModal').classList.add('hidden'); }
+    // Storage Keys
+    const SCADA_STATE_KEY = 'GRID_SCADA_BREAKER_STATES_V1';
+    const SCHEDULE_STORAGE_KEY = 'GRID_SWITCHING_SCHEDULES_V1';
 
-    function handleLogin(e) {
-      e.preventDefault();
-      const u = document.getElementById('loginUser').value;
-      const p = document.getElementById('loginPass').value;
+    // State Variables
+    let breakerStates = {
+      CB101: true,
+      CB102: true,
+      CB103: true
+    };
 
-      if (u === 'CDSO' && p === 'CDSO') {
-        document.getElementById('loginError').classList.add('hidden');
-        hideLoginModal();
-        document.getElementById('applicantView').classList.add('hidden');
-        document.getElementById('operatorPortal').classList.remove('hidden');
-        document.getElementById('loginBtn').classList.add('hidden');
-        document.getElementById('operatorBadge').classList.remove('hidden');
+    let scheduleData = [];
+    let ganttInstance = null;
+
+    // Initialization
+    document.addEventListener("DOMContentLoaded", () => {
+      setDefaultStartTime();
+      loadStoredData();
+      renderAll();
+      logEvent("SYSTEM", "Grid Portal initialized. Live SCADA link active.");
+    });
+
+    function setDefaultStartTime() {
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      document.getElementById('startTime').value = now.toISOString().slice(0, 16);
+    }
+
+    // Default Data
+    function getSeedSchedules() {
+      const now = new Date();
+      const format = (d) => d.toISOString().slice(0, 16).replace('T', ' ');
+
+      return [
+        {
+          id: 'REQ-101',
+          name: 'Substation Alpha - CB101 Open',
+          asset: 'Substation Alpha - CB101',
+          action: 'Open Breaker (Trip)',
+          priority: 'High',
+          start: format(new Date(now.getTime() - 1 * 3600 * 1000)),
+          end: format(new Date(now.getTime() + 3 * 3600 * 1000)),
+          progress: 50,
+          status: 'In-Progress'
+        },
+        {
+          id: 'REQ-102',
+          name: 'XFMR Bank 1 Maintenance',
+          asset: 'Substation Alpha - XFMR1',
+          action: 'Isolate Transformer',
+          priority: 'Standard',
+          start: format(new Date(now.getTime() + 5 * 3600 * 1000)),
+          end: format(new Date(now.getTime() + 10 * 3600 * 1000)),
+          progress: 0,
+          status: 'Pending'
+        }
+      ];
+    }
+
+    // Storage Management
+    function loadStoredData() {
+      // Load Breakers
+      const savedBreakers = localStorage.getItem(SCADA_STATE_KEY);
+      if (savedBreakers) {
+        try { breakerStates = JSON.parse(savedBreakers); } catch(e){}
+      }
+
+      // Load Schedules
+      const savedSchedules = localStorage.getItem(SCHEDULE_STORAGE_KEY);
+      if (savedSchedules) {
+        try { scheduleData = JSON.parse(savedSchedules); } catch(e){}
       } else {
-        document.getElementById('loginError').classList.remove('hidden');
+        scheduleData = getSeedSchedules();
+        saveSchedules();
       }
     }
 
-    function logoutCDSO() {
-      document.getElementById('applicantView').classList.remove('hidden');
-      document.getElementById('operatorPortal').classList.add('hidden');
-      document.getElementById('loginBtn').classList.remove('hidden');
-      document.getElementById('operatorBadge').classList.add('hidden');
+    function saveBreakers() {
+      localStorage.setItem(SCADA_STATE_KEY, JSON.stringify(breakerStates));
     }
 
-    // Render Table from Window Object (Pushed live by Firebase)
-    function renderOperatorTable() {
-      const tbody = document.getElementById('operatorTableBody');
-      if (!tbody) return;
+    function saveSchedules() {
+      localStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify(scheduleData));
+    }
+
+    function resetData() {
+      breakerStates = { CB101: true, CB102: true, CB103: true };
+      scheduleData = getSeedSchedules();
+      saveBreakers();
+      saveSchedules();
+      renderAll();
+      logEvent("SYSTEM", "Portal state reset to demo defaults.");
+    }
+
+    // Interactive SLD Breaker Toggle
+    function toggleBreaker(id) {
+      breakerStates[id] = !breakerStates[id];
+      saveBreakers();
+      updateSchematicUI();
+      logEvent("SCADA CONTROL", `Breaker ${id} manually ${breakerStates[id] ? 'CLOSED' : 'TRIPPED / OPENED'}.`);
+    }
+
+    function updateSchematicUI() {
+      let activeCount = 0;
+
+      Object.keys(breakerStates).forEach((id, idx) => {
+        const isClosed = breakerStates[id];
+        const rect = document.getElementById(`rect-${id}`);
+        const txt = document.getElementById(`txt-${id}`);
+        const line = document.getElementById(`line${idx+1}`);
+
+        if (isClosed) {
+          activeCount++;
+          rect.setAttribute('fill', '#15803d');
+          rect.setAttribute('stroke', '#4ade80');
+          txt.textContent = 'CLOSED';
+          line.setAttribute('class', 'power-line');
+          line.setAttribute('stroke', '#22c55e');
+        } else {
+          rect.setAttribute('fill', '#991b1b');
+          rect.setAttribute('stroke', '#f87171');
+          txt.textContent = 'OPEN';
+          line.setAttribute('class', 'power-line-deenergized');
+        }
+      });
+
+      // Update Telemetry Header Metrics
+      document.getElementById('statBreakers').innerText = `${activeCount} / 3 Closed`;
+      const load = (activeCount * 47.5).toFixed(1);
+      document.getElementById('statLoad').innerText = `${load} MW`;
+    }
+
+    // Scheduling Submission
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      const asset = document.getElementById('assetName').value;
+      const action = document.getElementById('actionType').value;
+      const priority = document.getElementById('priority').value;
+      const startInput = document.getElementById('startTime').value;
+      const durationHours = parseInt(document.getElementById('duration').value);
+
+      const startDate = new Date(startInput);
+      const endDate = new Date(startDate.getTime() + durationHours * 3600 * 1000);
+      const format = (d) => d.toISOString().slice(0, 16).replace('T', ' ');
+
+      const newReq = {
+        id: 'REQ-' + Math.floor(100 + Math.random() * 900),
+        name: `${asset} - ${action}`,
+        asset: asset,
+        action: action,
+        priority: priority,
+        start: format(startDate),
+        end: format(endDate),
+        progress: 0,
+        status: 'Pending'
+      };
+
+      scheduleData.push(newReq);
+      saveSchedules();
+      renderAll();
+      logEvent("SCHEDULER", `New switching request ${newReq.id} added for ${asset}.`);
+      document.getElementById('assetName').value = '';
+    }
+
+    // Execution & Status Updates
+    function updateStatus(id, newStatus) {
+      const item = scheduleData.find(x => x.id === id);
+      if (item) {
+        item.status = newStatus;
+        if (newStatus === 'Completed') item.progress = 100;
+        if (newStatus === 'In-Progress') item.progress = 50;
+        if (newStatus === 'Pending') item.progress = 0;
+
+        saveSchedules();
+        renderAll();
+        logEvent("WORKFLOW", `Task ${id} status updated to [${newStatus}].`);
+      }
+    }
+
+    function deleteRequest(id) {
+      scheduleData = scheduleData.filter(x => x.id !== id);
+      saveSchedules();
+      renderAll();
+      logEvent("SCHEDULER", `Task ${id} removed from registry.`);
+    }
+
+    // Logger
+    function logEvent(source, msg) {
+      const log = document.getElementById('alarmLog');
+      const time = new Date().toLocaleTimeString();
+      const entry = document.createElement('div');
+      entry.className = "border-b border-slate-800/50 pb-1";
+      entry.innerHTML = `<span class="text-slate-500">[${time}]</span> <span class="text-blue-400 font-bold">${source}:</span> <span class="text-slate-300">${msg}</span>`;
+      log.prepend(entry);
+    }
+
+    // Render Master Trigger
+    function renderAll() {
+      updateSchematicUI();
+      renderTable();
+      renderGanttChart();
+      
+      const pendingCount = scheduleData.filter(x => x.status === 'Pending').length;
+      document.getElementById('statPendingCount').innerText = pendingCount;
+    }
+
+    // Table Rendering
+    function renderTable() {
+      const tbody = document.getElementById('scheduleTableBody');
       tbody.innerHTML = '';
 
-      const reqs = window.serverRequests || [];
-
-      if (reqs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-500">No applications recorded in server database.</td></tr>`;
+      if (scheduleData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-500">No scheduled switching requests recorded.</td></tr>`;
         return;
       }
 
-      reqs.forEach((req) => {
+      scheduleData.forEach(item => {
         const tr = document.createElement('tr');
-        tr.className = 'hover:bg-slate-800/50 transition';
+        
+        let statusBadge = '';
+        if (item.status === 'Pending') statusBadge = '<span class="px-2 py-0.5 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">Pending</span>';
+        else if (item.status === 'In-Progress') statusBadge = '<span class="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">In-Progress</span>';
+        else if (item.status === 'Completed') statusBadge = '<span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Completed</span>';
+
         tr.innerHTML = `
-          <td class="p-3 font-mono text-sky-400 font-bold">${req.refId}</td>
-          <td class="p-3">
-            <div class="font-medium text-white">${req.substation}</div>
-            <div class="text-slate-500">${req.equipment} (<span class="text-amber-400 font-semibold">${req.voltage}</span>)</div>
-          </td>
-          <td class="p-3">
-            <span class="px-2 py-1 rounded text-[10px] font-bold ${
-              req.actionType.includes('OPEN') ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
-              req.actionType.includes('CLOSE') ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-              'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-            }">
-              ${req.actionType}
-            </span>
-          </td>
-          <td class="p-3 text-slate-300">${req.executionTime}</td>
-          <td class="p-3">
-            <div class="text-white">${req.requester}</div>
-            <a href="mailto:${req.email}" class="text-sky-400 hover:underline text-[11px]">${req.email}</a>
-          </td>
-          <td class="p-3">
-            <select onchange="updateStatus('${req.docId}', this.value)" class="p-1.5 rounded text-[11px] font-semibold bg-slate-800 text-slate-200">
-              <option value="Pending Review" ${req.status === 'Pending Review' ? 'selected' : ''}>⏳ Pending Review</option>
-              <option value="Approved & Scheduled" ${req.status === 'Approved & Scheduled' ? 'selected' : ''}>📅 Approved & Scheduled</option>
-              <option value="Execution Completed" ${req.status === 'Execution Completed' ? 'selected' : ''}>✅ Completed</option>
-              <option value="Rejected" ${req.status === 'Rejected' ? 'selected' : ''}>❌ Rejected</option>
-            </select>
-          </td>
-          <td class="p-3 text-right">
-            <button onclick="removeRequest('${req.docId}')" class="text-slate-500 hover:text-red-400 p-1">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-            </button>
+          <td class="p-3 font-mono text-slate-400">${item.id}</td>
+          <td class="p-3 font-medium text-slate-200">${item.asset}</td>
+          <td class="p-3">${item.action}</td>
+          <td class="p-3 text-slate-400 font-mono text-[11px]">${item.start} &rarr; ${item.end}</td>
+          <td class="p-3">${statusBadge}</td>
+          <td class="p-3 text-right space-x-2">
+            ${item.status === 'Pending' ? `<button onclick="updateStatus('${item.id}', 'In-Progress')" class="text-cyan-400 hover:underline">Execute</button>` : ''}
+            ${item.status === 'In-Progress' ? `<button onclick="updateStatus('${item.id}', 'Completed')" class="text-emerald-400 hover:underline">Complete</button>` : ''}
+            <button onclick="deleteRequest('${item.id}')" class="text-rose-400 hover:underline">Delete</button>
           </td>
         `;
         tbody.appendChild(tr);
       });
     }
 
-    // Export Server Data to Excel
-    async function exportToExcel() {
-      const reqs = window.serverRequests || [];
-      if (reqs.length === 0) return;
+    // Gantt Chart Rendering
+    function renderGanttChart() {
+      const container = document.getElementById('gantt-chart');
+      container.innerHTML = '';
 
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('CDSO Central Log');
+      if (scheduleData.length === 0) {
+        container.innerHTML = '<div class="text-center py-8 text-slate-500 text-sm">No tasks scheduled for Gantt view.</div>';
+        return;
+      }
 
-      worksheet.mergeCells('A1:K1');
-      const titleCell = worksheet.getCell('A1');
-      titleCell.value = 'BASF CDSO CENTRAL SERVER - HIGH VOLTAGE SWITCHING LOG';
-      titleCell.font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
-      titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF004A96' } };
-      titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
-      worksheet.getRow(1).height = 40;
+      const tasks = scheduleData.map(item => ({
+        id: item.id,
+        name: item.name,
+        start: item.start,
+        end: item.end,
+        progress: item.progress,
+        custom_class: 'status-' + item.status.toLowerCase().replace(' ', '-')
+      }));
 
-      const headers = ['Ref ID', 'Filed Date/Time', 'Substation/Bay', 'Voltage Level', 'Equipment ID', 'Action Type', 'Priority', 'Applicant Name', 'Applicant Email', 'Target Execution', 'Status'];
-      worksheet.addRow(headers);
-
-      reqs.forEach(req => {
-        worksheet.addRow([req.refId, req.timestamp, req.substation, req.voltage, req.equipment, req.actionType, req.priority, req.requester, req.email, req.executionTime, req.status]);
+      ganttInstance = new Gantt("#gantt-chart", tasks, {
+        header_height: 50,
+        column_width: 30,
+        step: 24,
+        view_modes: ['Hour', 'Day', 'Week'],
+        view_mode: 'Day',
+        date_format: 'YYYY-MM-DD HH:mm',
+        on_date_change: function(task, start, end) {
+          const format = (d) => d.toISOString().slice(0, 16).replace('T', ' ');
+          const target = scheduleData.find(x => x.id === task.id);
+          if (target) {
+            target.start = format(start);
+            target.end = format(end);
+            saveSchedules();
+            renderTable();
+            logEvent("GANTT", `Rescheduled timeline for ${task.id}.`);
+          }
+        }
       });
+    }
 
-      worksheet.columns = [{ width: 18 }, { width: 22 }, { width: 25 }, { width: 14 }, { width: 18 }, { width: 20 }, { width: 18 }, { width: 22 }, { width: 25 }, { width: 22 }, { width: 22 }];
-
-      const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      saveAs(blob, `BASF_CDSO_Server_Schedule_${new Date().toISOString().slice(0,10)}.xlsx`);
+    function changeGanttView(mode) {
+      if (ganttInstance) ganttInstance.change_view_mode(mode);
+      ['Hour', 'Day', 'Week'].forEach(m => {
+        const btn = document.getElementById('btn' + m);
+        btn.className = (m === mode) 
+          ? "px-3 py-1 text-xs rounded font-medium bg-blue-600 text-white transition"
+          : "px-3 py-1 text-xs rounded font-medium text-slate-400 hover:text-white transition";
+      });
     }
   </script>
 </body>
 </html>
+  
