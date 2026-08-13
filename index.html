@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BASF - High Voltage Switching Portal</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- ExcelJS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+  <!-- FileSaver.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+  <style>
+    body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+    input, select, textarea {
+      background-color: #1e293b !important;
+      color: #f8fafc !important;
+      border: 1px solid #334155 !important;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: #004A96 !important; /* BASF Dark Blue */
+      outline: none !important;
+    }
+    .basf-blue { background-color: #004A96; }
+    .basf-blue:hover { background-color: #003366; }
+  </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen flex flex-col justify-between">
+
+  <div class="max-w-7xl mx-auto w-full space-y-6">
+    
+    <!-- Top Header -->
+    <header class="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-xl flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-4">
+        <!-- BASF Logo Component -->
+        <div class="bg-white p-2 rounded-md shadow flex items-center justify-center">
+          <svg class="h-8 w-24" viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="120" height="40" fill="white"/>
+            <!-- BASF Square Brand Icon -->
+            <rect x="5" y="8" width="24" height="24" fill="#004A96"/>
+            <rect x="11" y="14" width="12" height="12" fill="white"/>
+            <rect x="32" y="18" width="6" height="14" fill="#004A96"/>
+            <!-- BASF Wordmark SVG Text -->
+            <text x="42" y="27" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="20" fill="#004A96">BASF</text>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold text-white tracking-wide">High Voltage Switching Portal</h1>
+          <p class="text-xs text-slate-400">Closed Distribution System Operator (CDSO) Management System</p>
+        </div>
+      </div>
+
+      <!-- Header Navigation / Role Toggle -->
+      <div id="authNav">
+        <button id="loginBtn" onclick="showLoginModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-2 px-4 rounded-lg border border-slate-700 flex items-center gap-2 transition">
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+          CDSO Operator Login
+        </button>
+        <div id="operatorBadge" class="hidden flex items-center gap-3">
+          <span class="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs px-3 py-1 rounded-full font-mono">Logged in: CDSO</span>
+          <button onclick="logoutCDSO()" class="bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-semibold py-1.5 px-3 rounded-lg border border-red-500/30 transition">
+            Logout
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- SECTION 1: APPLICANT VIEW (Default Public View) -->
+    <main id="applicantView" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      
+      <!-- Form Panel -->
+      <div class="lg:col-span-1 bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-xl">
+        <h2 class="text-md font-semibold mb-4 text-sky-400 flex items-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          Submit Switching Application
+        </h2>
+
+        <form id="switchingForm" onsubmit="handleFormSubmit(event)" class="space-y-3 text-xs">
+          <div>
+            <label class="block text-slate-400 mb-1">Substation / Bay Reference *</label>
+            <input type="text" id="substation" required placeholder="e.g. Substation Central - Bay 12" class="w-full p-2.5 rounded-md" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-slate-400 mb-1">Voltage Level *</label>
+              <select id="voltage" required class="w-full p-2.5 rounded-md">
+                <option value="150kV">150 kV</option>
+                <option value="36kV">36 kV</option>
+                <option value="10kV">10 kV</option>
+                <option value="6kV">6 kV</option>
+                <option value="0.69kV">0.69 kV</option>
+                <option value="0.40kV">0.40 kV</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">Equipment ID *</label>
+              <input type="text" id="equipment" required placeholder="e.g. Q01 Breaker" class="w-full p-2.5 rounded-md" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-slate-400 mb-1">Action Type *</label>
+              <select id="actionType" required class="w-full p-2.5 rounded-md">
+                <option value="OPEN (Isolate)">OPEN (Isolate)</option>
+                <option value="CLOSE (Energize)">CLOSE (Energize)</option>
+                <option value="EARTH ON">EARTH ON</option>
+                <option value="EARTH OFF">EARTH OFF</option>
+                <option value="RACK OUT">RACK OUT</option>
+                <option value="RACK IN">RACK IN</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">Priority *</label>
+              <select id="priority" required class="w-full p-2.5 rounded-md">
+                <option value="Standard Scheduled">Standard</option>
+                <option value="Urgent Maintenance">Urgent</option>
+                <option value="EMERGENCY">EMERGENCY</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-slate-400 mb-1">Applicant Name *</label>
+              <input type="text" id="requester" required placeholder="John Doe" class="w-full p-2.5 rounded-md" />
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">E-mail Address *</label>
+              <input type="email" id="email" required placeholder="john.doe@basf.com" class="w-full p-2.5 rounded-md" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-slate-400 mb-1">Requested Execution Date & Time *</label>
+            <input type="datetime-local" id="executionTime" required class="w-full p-2.5 rounded-md" />
+          </div>
+
+          <div>
+            <label class="block text-slate-400 mb-1">Operational Reason & Safety Interlocks *</label>
+            <textarea id="purpose" rows="3" required placeholder="Work permit details, safety precautions..." class="w-full p-2.5 rounded-md"></textarea>
+          </div>
+
+          <button type="submit" class="w-full basf-blue text-white font-medium py-2.5 rounded-md shadow-md transition flex justify-center items-center gap-2 text-sm mt-2">
+            Submit Request to CDSO
+          </button>
+        </form>
+      </div>
+
+      <!-- Applicant Submission Receipt Panel -->
+      <div class="lg:col-span-2 bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-xl flex flex-col justify-between">
+        <div>
+          <h2 class="text-md font-semibold mb-2 text-slate-300">Application Confirmation Panel</h2>
+          <p class="text-xs text-slate-400 mb-6">Submitted requests are transferred directly to the CDSO Grid Operators. Downloadable logs are restricted to authorized CDSO personnel.</p>
+
+          <div id="submissionAck" class="hidden p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs space-y-2 mb-6">
+            <div class="font-bold text-sm flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              Request Filed Successfully!
+            </div>
+            <p>Your switching request has been logged under ID <span id="ackId" class="font-mono font-bold text-white"></span> and dispatched to the CDSO dispatch schedule.</p>
+          </div>
+
+          <div class="border border-slate-800 rounded-lg p-6 text-center text-slate-500 bg-slate-950/50">
+            <svg class="w-12 h-12 mx-auto mb-2 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            <p class="text-sm font-medium text-slate-400">Data Access Restricted</p>
+            <p class="text-xs text-slate-500 mt-1 max-w-md mx-auto">Only CDSO Grid Operators can review, schedule, and export switching schedules. If you are a Grid Operator, please log in above.</p>
+          </div>
+        </div>
+        
+        <div class="text-[11px] text-slate-500 pt-4 border-t border-slate-800">
+          BASF Electrical Safety Regulations • CDSO Operation Portal
+        </div>
+      </div>
+    </main>
+
+    <!-- SECTION 2: CDSO OPERATOR PORTAL & SCHEDULING MODULE (Restricted View) -->
+    <main id="operatorPortal" class="hidden space-y-6">
+      
+      <!-- Operator Control Header -->
+      <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h2 class="text-lg font-bold text-emerald-400 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            CDSO Grid Operator Management Console
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">Review, approve, schedule, and download active switching actions.</p>
+        </div>
+
+        <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold py-2.5 px-4 rounded-lg shadow-lg flex items-center gap-2 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          Export Log to Excel (.xlsx)
+        </button>
+      </div>
+
+      <!-- Scheduling & Action Requests Table -->
+      <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-xl">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-800 text-slate-400 uppercase tracking-wider">
+              <tr>
+                <th class="p-3">Ref ID</th>
+                <th class="p-3">Substation & Equipment</th>
+                <th class="p-3">Action</th>
+                <th class="p-3">Requested Time</th>
+                <th class="p-3">Applicant & Contact</th>
+                <th class="p-3">Scheduling & Status</th>
+                <th class="p-3 text-right">Delete</th>
+              </tr>
+            </thead>
+            <tbody id="operatorTableBody" class="divide-y divide-slate-800">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- CDSO Login Modal -->
+  <div id="loginModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-800 p-6 rounded-xl max-w-sm w-full space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          CDSO Operator Authentication
+        </h3>
+        <button onclick="hideLoginModal()" class="text-slate-500 hover:text-white">&times;</button>
+      </div>
+
+      <form onsubmit="handleLogin(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-400 mb-1">Login Name</label>
+          <input type="text" id="loginUser" required class="w-full p-2.5 rounded-md" placeholder="Enter username" />
+        </div>
+        <div>
+          <label class="block text-slate-400 mb-1">Password</label>
+          <input type="password" id="loginPass" required class="w-full p-2.5 rounded-md" placeholder="Enter password" />
+        </div>
+        <div id="loginError" class="text-red-400 text-xs hidden">Invalid credentials.</div>
+        <button type="submit" class="w-full basf-blue text-white font-medium py-2 rounded-md shadow transition">
+          Login
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // In-memory + LocalStorage State
+    let requests = JSON.parse(localStorage.getItem('basf_hv_requests')) || [];
+    let isLoggedIn = false;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // Set default execution time (+1h)
+      const now = new Date();
+      now.setHours(now.getHours() + 1);
+      document.getElementById('executionTime').value = now.toISOString().slice(0,16);
+      renderOperatorTable();
+    });
+
+    // Handle Public Form Submission
+    function handleFormSubmit(e) {
+      e.preventDefault();
+
+      const newReq = {
+        id: 'BASF-HV-' + Math.floor(10000 + Math.random() * 90000),
+        timestamp: new Date().toLocaleString(),
+        substation: document.getElementById('substation').value,
+        voltage: document.getElementById('voltage').value,
+        equipment: document.getElementById('equipment').value,
+        actionType: document.getElementById('actionType').value,
+        priority: document.getElementById('priority').value,
+        requester: document.getElementById('requester').value,
+        email: document.getElementById('email').value,
+        executionTime: document.getElementById('executionTime').value.replace('T', ' '),
+        purpose: document.getElementById('purpose').value,
+        status: 'Pending Review',
+        operatorNotes: ''
+      };
+
+      requests.push(newReq);
+      saveState();
+      
+      // UI Confirmation
+      document.getElementById('ackId').textContent = newReq.id;
+      document.getElementById('submissionAck').classList.remove('hidden');
+      document.getElementById('switchingForm').reset();
+
+      // Reset default date
+      const now = new Date();
+      now.setHours(now.getHours() + 1);
+      document.getElementById('executionTime').value = now.toISOString().slice(0,16);
+
+      renderOperatorTable();
+    }
+
+    // Modal Control
+    function showLoginModal() { document.getElementById('loginModal').classList.remove('hidden'); }
+    function hideLoginModal() { document.getElementById('loginModal').classList.add('hidden'); }
+
+    // Authentication Logic
+    function handleLogin(e) {
+      e.preventDefault();
+      const u = document.getElementById('loginUser').value;
+      const p = document.getElementById('loginPass').value;
+
+      if (u === 'CDSO' && p === 'CDSO') {
+        isLoggedIn = true;
+        document.getElementById('loginError').classList.add('hidden');
+        hideLoginModal();
+        updateRoleUI();
+      } else {
+        document.getElementById('loginError').classList.remove('hidden');
+      }
+    }
+
+    function logoutCDSO() {
+      isLoggedIn = false;
+      updateRoleUI();
+    }
+
+    function updateRoleUI() {
+      if (isLoggedIn) {
+        document.getElementById('applicantView').classList.add('hidden');
+        document.getElementById('operatorPortal').classList.remove('hidden');
+        document.getElementById('loginBtn').classList.add('hidden');
+        document.getElementById('operatorBadge').classList.remove('hidden');
+      } else {
+        document.getElementById('applicantView').classList.remove('hidden');
+        document.getElementById('operatorPortal').classList.add('hidden');
+        document.getElementById('loginBtn').classList.remove('hidden');
+        document.getElementById('operatorBadge').classList.add('hidden');
+      }
+    }
+
+    // Scheduling Module Controls
+    function updateStatus(idx, newStatus) {
+      requests[idx].status = newStatus;
+      saveState();
+      renderOperatorTable();
+    }
+
+    function removeRequest(idx) {
+      if (confirm('Are you sure you want to delete this request record?')) {
+        requests.splice(idx, 1);
+        saveState();
+        renderOperatorTable();
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem('basf_hv_requests', JSON.stringify(requests));
+    }
+
+    // Render Operator Scheduling Table
+    function renderOperatorTable() {
+      const tbody = document.getElementById('operatorTableBody');
+      tbody.innerHTML = '';
+
+      if (requests.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-500">No active switching applications logged.</td></tr>`;
+        return;
+      }
+
+      requests.forEach((req, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-800/50 transition';
+        tr.innerHTML = `
+          <td class="p-3 font-mono text-sky-400 font-bold">${req.id}</td>
+          <td class="p-3">
+            <div class="font-medium text-white">${req.substation}</div>
+            <div class="text-slate-500">${req.equipment} (<span class="text-amber-400 font-semibold">${req.voltage}</span>)</div>
+          </td>
+          <td class="p-3">
+            <span class="px-2 py-1 rounded text-[10px] font-bold ${
+              req.actionType.includes('OPEN') ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+              req.actionType.includes('CLOSE') ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+              'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+            }">
+              ${req.actionType}
+            </span>
+          </td>
+          <td class="p-3 text-slate-300">${req.executionTime}</td>
+          <td class="p-3">
+            <div class="text-white">${req.requester}</div>
+            <a href="mailto:${req.email}" class="text-sky-400 hover:underline text-[11px]">${req.email}</a>
+          </td>
+          <td class="p-3">
+            <!-- Scheduling Module Dropdown -->
+            <select onchange="updateStatus(${idx}, this.value)" class="p-1.5 rounded text-[11px] font-semibold bg-slate-800 text-slate-200">
+              <option value="Pending Review" ${req.status === 'Pending Review' ? 'selected' : ''}>⏳ Pending Review</option>
+              <option value="Approved & Scheduled" ${req.status === 'Approved & Scheduled' ? 'selected' : ''}>📅 Approved & Scheduled</option>
+              <option value="Execution Completed" ${req.status === 'Execution Completed' ? 'selected' : ''}>✅ Completed</option>
+              <option value="Rejected" ${req.status === 'Rejected' ? 'selected' : ''}>❌ Rejected</option>
+            </select>
+          </td>
+          <td class="p-3 text-right">
+            <button onclick="removeRequest(${idx})" class="text-slate-500 hover:text-red-400 p-1">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Excel Export for CDSO Operators
+    async function exportToExcel() {
+      if (requests.length === 0) return;
+
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('CDSO Switching Schedule');
+
+      // Title Header
+      worksheet.mergeCells('A1:K1');
+      const titleCell = worksheet.getCell('A1');
+      titleCell.value = 'BASF CDSO - HIGH VOLTAGE SWITCHING ACTION SCHEDULE';
+      titleCell.font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+      titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF004A96' } }; // BASF Blue
+      titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      worksheet.getRow(1).height = 40;
+
+      // Timestamp
+      worksheet.getCell('A2').value = `Exported by CDSO Operator on: ${new Date().toLocaleString()}`;
+      worksheet.getCell('A2').font = { italic: true, size: 9, color: { argb: 'FF64748B' } };
+      worksheet.getRow(2).height = 20;
+
+      // Table Headers
+      const headers = [
+        'Request ID', 'Filed Date/Time', 'Substation/Bay', 'Voltage Level', 
+        'Equipment ID', 'Action Type', 'Priority', 'Applicant Name', 'Applicant Email', 'Target Execution', 'Schedule Status'
+      ];
+      
+      const headerRow = worksheet.addRow(headers);
+      headerRow.height = 25;
+
+      headerRow.eachCell((cell) => {
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      });
+
+      // Data Rows
+      requests.forEach(req => {
+        const row = worksheet.addRow([
+          req.id,
+          req.timestamp,
+          req.substation,
+          req.voltage,
+          req.equipment,
+          req.actionType,
+          req.priority,
+          req.requester,
+          req.email,
+          req.executionTime,
+          req.status
+        ]);
+
+        row.height = 22;
+        row.eachCell((cell) => {
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        });
+      });
+
+      // Width Auto-fit
+      worksheet.columns = [
+        { width: 18 }, { width: 22 }, { width: 25 }, { width: 14 },
+        { width: 18 }, { width: 20 }, { width: 18 }, { width: 22 },
+        { width: 25 }, { width: 22 }, { width: 22 }
+      ];
+
+      // Export file
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      saveAs(blob, `BASF_CDSO_Switching_Schedule_${new Date().toISOString().slice(0,10)}.xlsx`);
+    }
+  </script>
+</body>
+</html>
